@@ -15,27 +15,28 @@ Task::Task(string task_name, int task_exec_time, int task_period, int task_deadl
 	deadline 		= task_deadline;
 	priority		= task_priority;
 	seconds_in_period = 0;
+	completed 	= false;
+	status	 	= unscheduled;
 
 	pthread_mutex_init(&completeLock, NULL);
 	pthread_mutex_init(&runLock, NULL);
-	completed 	= false;
-	status	 	= unscheduled;
 }
+
 
 Task::~Task() {
 	// TODO Auto-generated destructor stub
 }
 
 void Task::start(){
-	//pthread_mutex_lock(&runLock);
+	pthread_mutex_lock(&runLock);
 	status = running;
-	//pthread_mutex_unlock(&runLock);
+	pthread_mutex_unlock(&runLock);
 }
 
 void Task::stop(){
-	//pthread_mutex_lock(&runLock);
+	pthread_mutex_lock(&runLock);
 	status = idle;
-	//pthread_mutex_unlock(&runLock);
+	pthread_mutex_unlock(&runLock);
 }
 
 void Task::completedExecution(bool c){

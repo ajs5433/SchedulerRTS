@@ -11,19 +11,22 @@
 #include <sstream>
 using namespace std;
 
-#define PRINT_ALL true				// created to print extra information in the program for verification of the correct program flow.
+#define PRINT_ALL 					false				// created to print extra information in the program for verification of the correct program flow.
 #define EARLIEST_DEADLINE_FIRST 	0
 #define SHORTEST_COMP_TIME 			1
 #define LEAST_SLACK_TIME			2
 #define SLEEP_TIME					1000
 
 /* Global variables: 	*/
-int total_elapsed_time 	= 0;
-int program_exec_time 	= 0;
-bool program_running 	= false;
-int scheduling_algorithm = -1;
+int total_elapsed_time 		= 0;
+int program_exec_time 		= 0;
+bool program_running 		= false;
+int scheduling_algorithm 	= -1;
 vector<Task*> allTasks;
 vector<Task*> activeTasks; // Ordered by priority, low to high
+
+void updateTaskValues(Task* t, bool is_running);
+
 
 /* Thread created to keep a real-time count of the time elapsed
  * thread first waits for program to load input values from user and initialize threads
@@ -32,6 +35,7 @@ vector<Task*> activeTasks; // Ordered by priority, low to high
 void *timeElapsedThread(void *ptr){
 	struct timespec start, end;
 	while(!program_running);
+	printf("\n-----------------------------------------\nSTARTTING CLOCK %d SECONDS:", total_elapsed_time);
 	while(program_running){
 		clock_gettime(CLOCK_REALTIME,&start);
 		clock_gettime(CLOCK_REALTIME,&end);
@@ -43,7 +47,7 @@ void *timeElapsedThread(void *ptr){
 		total_elapsed_time++;
 
 		//Printing for verification purposes
-		if(PRINT_ALL)
+		//if(PRINT_ALL)
 			printf("\n-----------------------------------------\nAFTER %d SECONDS:", total_elapsed_time);
 	}
 	return NULL;
@@ -56,52 +60,63 @@ void *timeElapsedThread(void *ptr){
  * that is currently running.
  * */
 void* taskThread(void* t) {
-	int current_time;
 	Task *task = (Task *) t;
 	while(!program_running);
 	if(PRINT_ALL)
 		printf("\n%s started! (%d,%d,%d)", task->name.c_str(), task->execution_time, task->period, task->deadline);
 	while(program_running){
-		//Update Values
-		task->seconds_in_period++;
-		if (task->status == running){
-			task->remaining_time--;
-			if (task->remaining_time == 0){
-				task->completedExecution(true);
-				printf("\n--> %s: Completed!");
-			}
-		}else{ // if task is not running
-			if(task->seconds_in_period >= task->deadline){
-				printf("\n*** %s: Missed the deadline");
-			}
-		}
-		if(task->seconds_in_period == task->period){
-			if(!task->completed)
-				printf("\n*** %s: Task did not complete in the given period ");
-			task->remaining_time = task->execution_time;
-			task->seconds_in_period = 0;
-			task->completedExecution(false);
-
-			if(PRINT_ALL)
-				printf("\n%s Starting new period", task->name.c_str());
-		}
-		if(PRINT_ALL){
-			if(task->status == running){
-				printf("\nthread %s active! cycle: %d, remaining:  %d, completion status: %s",task->name.c_str(),task->seconds_in_period, task->remaining_time, (task->completed)? "true" : "false");
-			}else{
-				printf("\nthread %s not running! cycle: %d, remaining:  %d, completion status: %s",task->name.c_str(),task->seconds_in_period, task->remaining_time, (task->completed)? "true" : "false");
-			}
-		}
-
-		current_time = total_elapsed_time;
-		while(current_time==total_elapsed_time && program_running)
-			usleep(SLEEP_TIME);	//small sleep to avoid processor overload by threads
+		if (task->status == running)
+			updateTaskValues(task, true);
+		else
+			updateTaskValues(task, false);
 	}
 
 	//printing for verification purposes
 	if(PRINT_ALL)
 		printf("\nSimulation over, %s is no longer active", task->name.c_str());
 	return NULL;
+}
+
+void updateTaskValues(Task* t, bool is_running){
+	//Update Values
+	int current_time;
+	Task* task = t;
+
+	task->seconds_in_period++;
+	if (is_running){
+		task->remaining_time--;
+		if (task->remaining_time == 0){
+			task->completedExecution(true);
+			printf("\n--> %s: Completed!", task->name.c_str());
+		}
+	}else{ // if task is not running
+		if(task->seconds_in_period >= task->deadline)
+			if(!task->completed)
+				printf("\n*** %s: Missed the deadline", task->name.c_str());
+	}
+
+	if(task->seconds_in_period == task->period){
+		if(!task->completed)
+			printf("\n*** %s: Task did not complete in the given period ");
+		task->remaining_time = task->execution_time;
+		task->seconds_in_period = 0;
+		task->completedExecution(false);
+
+		if(PRINT_ALL)
+			printf("\n%s Starting new period", task->name.c_str());
+	}
+	if(PRINT_ALL){
+		if(task->status == running){
+			printf("\nthread %s active! cycle: %d, remaining:  %d, completion status: %s",task->name.c_str(),task->seconds_in_period, task->remaining_time, (task->completed)? "true" : "false");
+		}else{
+			printf("\nthread %s not running! cycle: %d, remaining:  %d, completion status: %s",task->name.c_str(),task->seconds_in_period, task->remaining_time, (task->completed)? "true" : "false");
+		}
+	}
+
+	current_time = total_elapsed_time;
+	while(current_time==total_elapsed_time && program_running)
+		usleep(SLEEP_TIME);	//small sleep to avoid processor overload by threads
+
 }
 
 
@@ -156,6 +171,25 @@ void getTasksFromUser(){
 		getline(cin, input);
 		if (input == "start")
 			break;
+		else if(input == "d"||input == "0"){
+			//Default values for debugging purposes
+			pthread_t* myThread1 = NULL;
+			pthread_t* myThread2 = NULL;
+			pthread_t* myThread3 = NULL;
+			Task* task1 = new Task("Task1", 1, 1, 1, 1);
+			Task* task2 = new Task("Task2", 2, 2, 2, 2);
+			Task* task3 = new Task("Task3", 3, 3, 3, 3);
+			createThread(myThread1, task1);
+			createThread(myThread2, task2);
+			createThread(myThread3, task3);
+			//pthread_mutex_init(&(task->completeLock), NULL);
+			//pthread_mutex_init(&(task->runLock), NULL);
+			allTasks.push_back(task1);
+			allTasks.push_back(task2);
+			allTasks.push_back(task3);
+			tokenCount = 0;
+			break;
+		}
 
 		while (((pos = input.find(" ")) <= string::npos) && tokenCount < 4) {
 			switch(tokenCount) {
@@ -187,6 +221,8 @@ void getTasksFromUser(){
 			pthread_t* myThread = NULL;
 			Task* task = new Task(name, c, p, d, priority);
 			createThread(myThread, task);
+			pthread_mutex_init(&(task->completeLock), NULL);
+			pthread_mutex_init(&(task->runLock), NULL);
 			//pthread_mutex_init(&(task->runLock), NULL);
 			allTasks.push_back(task);
 			tokenCount = 0;
@@ -289,11 +325,9 @@ void schedule(){
 			printf("\nAll tasks completed!!");
 		}else{
 			current_task->start();
-			if(previous_task->completed)
-				printf("\n%s completed!", previous_task->name.c_str());
-			else if (previous_task == NULL)
+			if (previous_task == NULL)
 				printf("A new task is available, %s is now running",current_task->name.c_str());
-			else
+			else if (previous_task!=current_task)
 				printf("\nPriority change! %s interrupted by %s", previous_task->name.c_str(), current_task->name.c_str());
 		}
 	}
@@ -303,14 +337,11 @@ void schedule(){
 }
 
 int main(int argc, char *argv[]) {
-	try{
-		initializeClock();
-		getSchedulingAlgorithm();
-		getTasksFromUser();
-		getSimulationTime();
-		schedule();
-	}catch(const std::exception &exc){
-		std::cerr << exc.what();
-	}
+	initializeClock();
+	getSchedulingAlgorithm();
+	getTasksFromUser();
+	getSimulationTime();
+	schedule();
+
 	return EXIT_SUCCESS;
 }
