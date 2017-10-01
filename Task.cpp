@@ -17,6 +17,7 @@ Task::Task(string task_name, int task_exec_time, int task_period, int task_deadl
 	seconds_in_period = 0;
 
 	pthread_mutex_init(&completeLock, NULL);
+	pthread_mutex_init(&runLock, NULL);
 	completed 	= false;
 	status	 	= unscheduled;
 }
@@ -26,15 +27,15 @@ Task::~Task() {
 }
 
 void Task::start(){
-	pthread_mutex_lock(&runLock);
+	//pthread_mutex_lock(&runLock);
 	status = running;
-	pthread_mutex_unlock(&runLock);
+	//pthread_mutex_unlock(&runLock);
 }
 
 void Task::stop(){
-	pthread_mutex_lock(&runLock);
+	//pthread_mutex_lock(&runLock);
 	status = idle;
-	pthread_mutex_unlock(&runLock);
+	//pthread_mutex_unlock(&runLock);
 }
 
 void Task::completedExecution(bool c){

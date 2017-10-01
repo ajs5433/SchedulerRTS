@@ -187,7 +187,7 @@ void getTasksFromUser(){
 			pthread_t* myThread = NULL;
 			Task* task = new Task(name, c, p, d, priority);
 			createThread(myThread, task);
-			pthread_mutex_init(&(task->runLock), NULL);
+			//pthread_mutex_init(&(task->runLock), NULL);
 			allTasks.push_back(task);
 			tokenCount = 0;
 
@@ -258,16 +258,10 @@ void initializeClock(){
 	pthread_create(&time_elapsed_thread, NULL, timeElapsedThread, NULL);
 }
 
-int main(int argc, char *argv[]) {
+void schedule(){
 	Task * current_task = NULL;
 	Task * previous_task = NULL;
 	int current_time;
-
-	//Initialization
-	initializeClock();
-	getSchedulingAlgorithm();
-	getTasksFromUser();
-	getSimulationTime();
 
 	/* main scheduler process:
 	 * wait for the priority of the tasks to change, then
@@ -279,6 +273,7 @@ int main(int argc, char *argv[]) {
 		printf("\n-->Highest priority task: %s",current_task->name.c_str());
 	current_task->start();
 	program_running = true;
+
 	while(total_elapsed_time < program_exec_time){
 		previous_task = current_task;
 		while(current_task == previous_task && total_elapsed_time < program_exec_time){
@@ -302,8 +297,20 @@ int main(int argc, char *argv[]) {
 				printf("\nPriority change! %s interrupted by %s", previous_task->name.c_str(), current_task->name.c_str());
 		}
 	}
+
 	program_running = false;
 	sleep(1);
+}
 
+int main(int argc, char *argv[]) {
+	try{
+		initializeClock();
+		getSchedulingAlgorithm();
+		getTasksFromUser();
+		getSimulationTime();
+		schedule();
+	}catch(const std::exception &exc){
+		std::cerr << exc.what();
+	}
 	return EXIT_SUCCESS;
 }
